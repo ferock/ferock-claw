@@ -361,7 +361,14 @@ app.all('*', async (c) => {
       if (debugLogs) {
         console.log('[WS] Client closed:', event.code, event.reason);
       }
-      containerWs.close(event.code, event.reason);
+      console.log(`[WS] Client closed: ${event.code} ${event.reason}`);
+  
+      // Mapear códigos inválidos a válidos
+      const closeCode = isValidCloseCode(event.code) ? event.code : 1000;
+      const closeReason = event.reason || '';
+    
+      console.log(`[WS] Closing container with code: ${closeCode}`);
+      containerWs.close(closeCode, closeReason);
     });
 
     containerWs.addEventListener('close', (event) => {
@@ -435,6 +442,28 @@ async function scheduled(
   } else {
     console.error('[cron] Backup sync failed:', result.error, result.details || '');
   }
+}
+
+function isValidCloseCode(code: number): boolean {
+  // Códigos válidos según RFC 6455
+  return (
+    code === 1000 || // Normal Closure
+    code === 1001 || // Going Away
+    code === 1002 || // Protocol Error
+    code === 1003 || // Unsupported Data
+    // 1004 es reservado
+    code === 1005 || // No Status Received (solo para recibir, no enviar)
+    // 1006 es reservado (abnormal closure)
+    code === 1007 || // Invalid frame payload data
+    code === 1008 || // Policy Violation
+    code === 1009 || // Message Too Big
+    code === 1010 || // Mandatory Extension
+    code === 1011 || // Internal Server Error
+    code === 1012 || // Service Restart
+    code === 1013 || // Try Again Later
+    code === 1014 || // Bad Gateway
+    code === 1015    // TLS handshake (solo para recibir, no enviar)
+  ) && code !== 1006 && code !== 1005 && code !== 1015; // Excluir reservados
 }
 
 export default {
